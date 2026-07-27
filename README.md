@@ -12,11 +12,22 @@ automaticky sbalí ("Hide file contents") soubory, jejichž název odpovídá za
 4. Hotovo — otevři libovolné MR na `gitlab.wallee.com` a diffy odpovídající vzorům
    se samy sbalí.
 
+## Zapnutí / vypnutí
+
+Klikni na ikonu extension v toolbaru → nahoře je přepínač "Auto-hide enabled".
+Přepíná se okamžitě (live), bez nutnosti dát "Save":
+
+- **Zapnuto** → soubory odpovídající vzorům se skryjí (klikne se na "Hide file contents").
+- **Vypnuto** → dřív skryté soubory odpovídající vzorům se zase rozbalí (klikne se na
+  "Show file contents").
+
+Stav se ukládá přes `chrome.storage.sync`, takže se synchronizuje mezi zařízeními
+přihlášenými ke stejnému Chrome účtu.
+
 ## Úprava vzorů
 
-Klikni na ikonu extension v toolbaru → objeví se textarea, kam můžeš zapsat
-vlastní vzory (jeden na řádek, `*` funguje jako wildcard). Uloží se přes
-`chrome.storage.sync`.
+V témže popupu je textarea, kam můžeš zapsat vlastní vzory (jeden na řádek, `*`
+funguje jako wildcard). Uloží se tlačítkem "Save".
 
 ## Jak to funguje
 
@@ -27,12 +38,14 @@ vlastní vzory (jeden na řádek, `*` funguje jako wildcard). Uloží se přes
 - Pro každý `.file-header-content` přečte název souboru
   (`[data-testid="file-name-content"]`, atribut `title`) a porovná ho s
   glob vzory převedenými na regex.
-- Pokud sedí a soubor je aktuálně rozbalený (tlačítko má
-  `aria-label="Hide file contents"`), klikne na něj.
-- Každý header se označí `data-autohide-processed`, takže pokud si soubor
-  ručně znovu rozbalíš, extension ho nebude znovu zavírat.
+- Podle aktuálního stavu přepínače (`enabled`) a toho, jestli je soubor zrovna
+  rozbalený nebo skrytý, klikne na tlačítko "Hide file contents" / "Show file
+  contents" — ale jen když se to liší od požadovaného stavu, takže se to
+  nezacyklí a nekliká zbytečně.
+- Přepínač i vzory se čtou přes `chrome.storage.onChanged`, takže se
+  změna z popupu projeví na stránce okamžitě, bez reloadu.
 
 ## Poznámka
 
-Pokud by GitLab časem změnil strukturu DOM (třídy, `data-testid` atributy),
-bude potřeba upravit selektory v `content.js`.
+Pokud by GitLab časem změnil strukturu DOM (třídy, `data-testid` atributy,
+`aria-label` tlačítek), bude potřeba upravit selektory v `content.js`.
