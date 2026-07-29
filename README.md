@@ -25,6 +25,13 @@ ale NE na detailu jednoho MR) se vpravo dole objeví plovoucí tlačítko **🎲
 Kliknutím se z aktuálně vyrenderovaného seznamu (respektuje jakékoli filtry v URL)
 náhodně vybere jeden MR a prohlížeč na něj naviguje.
 
+## Skrytí počtu změn
+
+V záložce "Changes" na detailu merge requestu (`.../merge_requests/<id>`) se
+číslo počtu změněných souborů (badge vedle "Changes") nahradí malou červenou
+tečkou. Po najetí myší (hover) se přes nativní tooltip (`title` atribut)
+zobrazí původní číslo.
+
 ## Jak to funguje
 
 - `content.js` se injectuje na stránky odpovídající
@@ -41,6 +48,9 @@ náhodně vybere jeden MR a prohlížeč na něj naviguje.
 - **Random MR:** na stránkách, kde `location.pathname` končí na `/merge_requests`
   nebo `/merge_requests/`, posbírá všechny `a[data-testid="issuable-title-link"]`
   odkazující na `/merge_requests/<číslo>` a jeden náhodně vybraný otevře.
+- **Skrytí počtu změn:** pro každý `.js-changes-tab-count` uloží původní text
+  do `data-original-count`, nastaví `title` s tímto číslem a vizuálně ho
+  nahradí červenou tečkou (`.gitlab-count-dot`).
 
 ## Poznámka
 

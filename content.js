@@ -2,6 +2,8 @@
   const DEFAULT_PATTERNS = ['*.spec.ts', '*.stories.tsx', '*.snap'];
   const PROCESSED_ATTR = 'data-autohide-processed';
   const RANDOM_BTN_ID = 'gitlab-random-mr-btn';
+  const COUNT_HIDDEN_ATTR = 'data-count-hidden';
+  const STYLE_ID = 'gitlab-autohide-styles';
 
   let regexes = [];
 
@@ -118,14 +120,52 @@
     }
   }
 
+  // ---- Hide "Changes" file-count badge (merge request detail page) ----
+
+  function injectStyles() {
+    if (document.getElementById(STYLE_ID)) return;
+    const style = document.createElement('style');
+    style.id = STYLE_ID;
+    style.textContent = `
+      .gitlab-count-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #e9322d;
+        vertical-align: middle;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function processChangesCount(el) {
+    if (el.hasAttribute(COUNT_HIDDEN_ATTR)) return;
+
+    const original = el.textContent.trim();
+    if (!original) return; // not rendered yet, retry on next mutation
+
+    el.setAttribute(COUNT_HIDDEN_ATTR, 'true');
+    el.dataset.originalCount = original;
+    el.title = `${original} changed files`;
+    el.textContent = '';
+    el.classList.add('gitlab-count-dot');
+  }
+
+  function scanChangesCount() {
+    document.querySelectorAll('.js-changes-tab-count').forEach(processChangesCount);
+  }
+
   // ---- bootstrap ----
 
   function tick() {
     scanDiffHeaders();
+    scanChangesCount();
     handleRoute();
   }
 
   function start() {
+    injectStyles();
     loadPatterns(() => {
       tick();
       const observer = new MutationObserver(tick);
