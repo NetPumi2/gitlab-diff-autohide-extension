@@ -119,10 +119,11 @@
 
   // ---- Hide "Changes" file-count badge (merge request detail page) ----
   //
-  // The badge sits inside an <a> that likely has pointer-events disabled
-  // somewhere in its ancestry, so native `title` hover never fires on the
-  // badge itself. We force pointer-events back on for the badge and use a
-  // custom CSS ::after tooltip instead of relying on the native title.
+  // The badge sits inside an <a> whose ancestry disables pointer-events, so
+  // native `title` hover never fired on the badge itself. Forcing
+  // pointer-events back on fixes that - the native browser tooltip now
+  // works, so we don't need a custom CSS tooltip (it clipped against the
+  // sticky header's overflow anyway).
 
   function injectStyles() {
     if (document.getElementById(STYLE_ID)) return;
@@ -138,22 +139,6 @@
       .${HIDDEN_BADGE_CLASS} .js-changes-tab-count,
       .${HIDDEN_BADGE_CLASS} .gl-badge-content {
         color: transparent !important;
-        pointer-events: none;
-      }
-      .${HIDDEN_BADGE_CLASS}:hover::after {
-        content: attr(data-original-count) " changed files";
-        position: absolute;
-        bottom: 125%;
-        left: 50%;
-        transform: translateX(-50%);
-        background: #1f1e24;
-        color: #fff;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-        white-space: nowrap;
-        z-index: 10000;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
         pointer-events: none;
       }
     `;
