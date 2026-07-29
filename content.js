@@ -10,7 +10,6 @@
   // ---- Diff auto-hide (merge request diffs page) ----
 
   function globToRegex(glob) {
-    // Escape regex special chars, then turn '*' into '.*'
     const escaped = glob.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
     return new RegExp('^' + escaped + '$');
   }
@@ -39,7 +38,7 @@
     if (header.hasAttribute(PROCESSED_ATTR)) return;
 
     const filename = getFilename(header);
-    if (!filename) return; // not fully rendered yet, retry on next mutation
+    if (!filename) return;
 
     header.setAttribute(PROCESSED_ATTR, 'true');
 
@@ -56,8 +55,6 @@
   // ---- Random MR button (merge requests list page) ----
 
   function isMrListPage() {
-    // e.g. /frontend/wallee-frontend/-/merge_requests or .../merge_requests/
-    // (with or without a query string), but NOT .../merge_requests/1084 or .../diffs
     return /\/merge_requests\/?$/.test(location.pathname);
   }
 
@@ -122,12 +119,10 @@
 
   // ---- Hide "Changes" file-count badge (merge request detail page) ----
   //
-  // GitLab re-renders the count text (Vue) whenever the active tab changes,
-  // so instead of clearing the text once, we keep it the same size/shape as
-  // the original badge and just recolor it via a persistent CSS class - that
-  // way it stays hidden no matter how many times the underlying text node
-  // gets updated. The tooltip goes on the whole badge (not the tiny number
-  // span) so hovering anywhere on the red pill shows it.
+  // The badge sits inside an <a> that likely has pointer-events disabled
+  // somewhere in its ancestry, so native `title` hover never fires on the
+  // badge itself. We force pointer-events back on for the badge and use a
+  // custom CSS ::after tooltip instead of relying on the native title.
 
   function injectStyles() {
     if (document.getElementById(STYLE_ID)) return;
@@ -137,10 +132,29 @@
       .${HIDDEN_BADGE_CLASS} {
         background-color: #e9322d !important;
         border-color: #e9322d !important;
+        position: relative;
+        pointer-events: auto !important;
       }
       .${HIDDEN_BADGE_CLASS} .js-changes-tab-count,
       .${HIDDEN_BADGE_CLASS} .gl-badge-content {
         color: transparent !important;
+        pointer-events: none;
+      }
+      .${HIDDEN_BADGE_CLASS}:hover::after {
+        content: attr(data-original-count) " changed files";
+        position: absolute;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1f1e24;
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        white-space: nowrap;
+        z-index: 10000;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+        pointer-events: none;
       }
     `;
     document.head.appendChild(style);
@@ -180,8 +194,6 @@
     });
   }
 
-  // Re-read patterns if the user updates them in the popup, and re-scan
-  // (new headers only, already-processed ones are left alone).
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'sync' && changes.patterns) {
       loadPatterns(() => {});
