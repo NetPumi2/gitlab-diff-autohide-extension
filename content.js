@@ -2,7 +2,7 @@
   const DEFAULT_PATTERNS = ['*.spec.ts', '*.stories.tsx', '*.snap'];
   const PROCESSED_ATTR = 'data-autohide-processed';
   const RANDOM_BTN_ID = 'gitlab-random-mr-btn';
-  const COUNT_HIDDEN_ATTR = 'data-count-hidden';
+  const HIDDEN_BADGE_CLASS = 'gitlab-hidden-badge';
   const STYLE_ID = 'gitlab-autohide-styles';
 
   let regexes = [];
@@ -121,35 +121,42 @@
   }
 
   // ---- Hide "Changes" file-count badge (merge request detail page) ----
+  //
+  // GitLab re-renders the count text (Vue) whenever the active tab changes,
+  // so instead of clearing the text once, we keep it the same size/shape as
+  // the original badge and just recolor it via a persistent CSS class - that
+  // way it stays hidden no matter how many times the underlying text node
+  // gets updated. The tooltip goes on the whole badge (not the tiny number
+  // span) so hovering anywhere on the red pill shows it.
 
   function injectStyles() {
     if (document.getElementById(STYLE_ID)) return;
     const style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = `
-      .gitlab-count-dot {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #e9322d;
-        vertical-align: middle;
+      .${HIDDEN_BADGE_CLASS} {
+        background-color: #e9322d !important;
+        border-color: #e9322d !important;
+      }
+      .${HIDDEN_BADGE_CLASS} .js-changes-tab-count,
+      .${HIDDEN_BADGE_CLASS} .gl-badge-content {
+        color: transparent !important;
       }
     `;
     document.head.appendChild(style);
   }
 
-  function processChangesCount(el) {
-    if (el.hasAttribute(COUNT_HIDDEN_ATTR)) return;
+  function processChangesCount(countEl) {
+    const badge = countEl.closest('.gl-badge') || countEl.parentElement;
+    if (!badge) return;
 
-    const original = el.textContent.trim();
-    if (!original) return; // not rendered yet, retry on next mutation
+    const text = countEl.textContent.trim();
+    if (text) {
+      badge.dataset.originalCount = text;
+      badge.title = `${text} changed files`;
+    }
 
-    el.setAttribute(COUNT_HIDDEN_ATTR, 'true');
-    el.dataset.originalCount = original;
-    el.title = `${original} changed files`;
-    el.textContent = '';
-    el.classList.add('gitlab-count-dot');
+    badge.classList.add(HIDDEN_BADGE_CLASS);
   }
 
   function scanChangesCount() {
@@ -169,7 +176,7 @@
     loadPatterns(() => {
       tick();
       const observer = new MutationObserver(tick);
-      observer.observe(document.body, { childList: true, subtree: true });
+      observer.observe(document.body, { childList: true, subtree: true, characterData: true });
     });
   }
 
