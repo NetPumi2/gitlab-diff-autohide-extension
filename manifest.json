@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
   "name": "GitLab Diff Auto-Hide",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Automatically collapses spec/stories/snapshot files in GitLab merge request diffs.",
   "permissions": ["storage"],
   "content_scripts": [
     {
-      "matches": ["https://gitlab.wallee.com/*/merge_requests/*"],
+      "matches": ["https://gitlab.wallee.com/*/merge_requests*"],
       "js": ["content.js"],
       "run_at": "document_idle"
     }

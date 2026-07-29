@@ -12,40 +12,37 @@ automaticky sbalí ("Hide file contents") soubory, jejichž název odpovídá za
 4. Hotovo — otevři libovolné MR na `gitlab.wallee.com` a diffy odpovídající vzorům
    se samy sbalí.
 
-## Zapnutí / vypnutí
-
-Klikni na ikonu extension v toolbaru → nahoře je přepínač "Auto-hide enabled".
-Přepíná se okamžitě (live), bez nutnosti dát "Save":
-
-- **Zapnuto** → soubory odpovídající vzorům se skryjí (klikne se na "Hide file contents").
-- **Vypnuto** → dřív skryté soubory odpovídající vzorům se zase rozbalí (klikne se na
-  "Show file contents").
-
-Stav se ukládá přes `chrome.storage.sync`, takže se synchronizuje mezi zařízeními
-přihlášenými ke stejnému Chrome účtu.
-
 ## Úprava vzorů
 
-V témže popupu je textarea, kam můžeš zapsat vlastní vzory (jeden na řádek, `*`
-funguje jako wildcard). Uloží se tlačítkem "Save".
+Klikni na ikonu extension v toolbaru → objeví se textarea, kam můžeš zapsat
+vlastní vzory (jeden na řádek, `*` funguje jako wildcard). Uloží se přes
+`chrome.storage.sync`.
+
+## Random MR tlačítko
+
+Na stránce se seznamem merge requestů (`.../merge_requests` nebo `.../merge_requests/?<filtry>`,
+ale NE na detailu jednoho MR) se vpravo dole objeví plovoucí tlačítko **🎲 Random MR**.
+Kliknutím se z aktuálně vyrenderovaného seznamu (respektuje jakékoli filtry v URL)
+náhodně vybere jeden MR a prohlížeč na něj naviguje.
 
 ## Jak to funguje
 
 - `content.js` se injectuje na stránky odpovídající
-  `https://gitlab.wallee.com/*/merge_requests/*`.
-- Přes `MutationObserver` sleduje DOM (GitLab je Vue SPA a diffy dorenderovává
-  postupně/lazy), takže i pozdě načtené soubory se zpracují.
-- Pro každý `.file-header-content` přečte název souboru
+  `https://gitlab.wallee.com/*/merge_requests*` (diffy, detail MR i seznam MRek).
+- Přes `MutationObserver` sleduje DOM (GitLab je Vue SPA a obsah dorenderovává
+  postupně/lazy), takže i pozdě načtené soubory/položky se zpracují a tlačítko
+  se přidá/odebere i při SPA navigaci bez reloadu stránky.
+- **Auto-hide:** pro každý `.file-header-content` přečte název souboru
   (`[data-testid="file-name-content"]`, atribut `title`) a porovná ho s
-  glob vzory převedenými na regex.
-- Podle aktuálního stavu přepínače (`enabled`) a toho, jestli je soubor zrovna
-  rozbalený nebo skrytý, klikne na tlačítko "Hide file contents" / "Show file
-  contents" — ale jen když se to liší od požadovaného stavu, takže se to
-  nezacyklí a nekliká zbytečně.
-- Přepínač i vzory se čtou přes `chrome.storage.onChanged`, takže se
-  změna z popupu projeví na stránce okamžitě, bez reloadu.
+  glob vzory převedenými na regex. Pokud sedí a soubor je aktuálně rozbalený
+  (tlačítko má `aria-label="Hide file contents"`), klikne na něj. Každý header
+  se označí `data-autohide-processed`, takže pokud si soubor ručně znovu
+  rozbalíš, extension ho nebude znovu zavírat.
+- **Random MR:** na stránkách, kde `location.pathname` končí na `/merge_requests`
+  nebo `/merge_requests/`, posbírá všechny `a[data-testid="issuable-title-link"]`
+  odkazující na `/merge_requests/<číslo>` a jeden náhodně vybraný otevře.
 
 ## Poznámka
 
-Pokud by GitLab časem změnil strukturu DOM (třídy, `data-testid` atributy,
-`aria-label` tlačítek), bude potřeba upravit selektory v `content.js`.
+Pokud by GitLab časem změnil strukturu DOM (třídy, `data-testid` atributy),
+bude potřeba upravit selektory v `content.js`.
