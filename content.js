@@ -119,11 +119,13 @@
 
   // ---- Hide "Changes" file-count badge (merge request detail page) ----
   //
-  // The badge sits inside an <a> whose ancestry disables pointer-events, so
-  // native `title` hover never fired on the badge itself. Forcing
-  // pointer-events back on fixes that - the native browser tooltip now
-  // works, so we don't need a custom CSS tooltip (it clipped against the
-  // sticky header's overflow anyway).
+  // GitLab re-renders the count text (Vue) whenever the active tab changes,
+  // so instead of clearing the text once, we keep it the same size/shape as
+  // the original badge and just recolor it via a persistent CSS class - that
+  // way it stays hidden no matter how many times the underlying text node
+  // gets updated. On hover, the badge reverts to its original look (colors
+  // captured before we override them) so you can peek at the real number,
+  // then goes back to red once the mouse leaves.
 
   function injectStyles() {
     if (document.getElementById(STYLE_ID)) return;
@@ -141,6 +143,14 @@
         color: transparent !important;
         pointer-events: none;
       }
+      .${HIDDEN_BADGE_CLASS}:hover {
+        background-color: var(--gitlab-autohide-original-bg, transparent) !important;
+        border-color: var(--gitlab-autohide-original-border, transparent) !important;
+      }
+      .${HIDDEN_BADGE_CLASS}:hover .js-changes-tab-count,
+      .${HIDDEN_BADGE_CLASS}:hover .gl-badge-content {
+        color: var(--gitlab-autohide-original-color, inherit) !important;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -153,6 +163,18 @@
     if (text) {
       badge.dataset.originalCount = text;
       badge.title = `${text} changed files`;
+    }
+
+    if (!badge.classList.contains(HIDDEN_BADGE_CLASS)) {
+      // Capture the badge's real colors before we override them, so :hover
+      // can restore the original look instead of guessing at a color.
+      const badgeStyle = getComputedStyle(badge);
+      badge.style.setProperty('--gitlab-autohide-original-bg', badgeStyle.backgroundColor);
+      badge.style.setProperty('--gitlab-autohide-original-border', badgeStyle.borderColor);
+
+      const contentEl = badge.querySelector('.gl-badge-content') || countEl;
+      const contentStyle = getComputedStyle(contentEl);
+      badge.style.setProperty('--gitlab-autohide-original-color', contentStyle.color);
     }
 
     badge.classList.add(HIDDEN_BADGE_CLASS);
