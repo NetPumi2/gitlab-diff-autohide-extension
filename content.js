@@ -197,6 +197,15 @@
   }
 
   // ---- Jump-to-uncovered-line button (diffs page) ----
+  //
+  // GitLab only ever renders diff content that's near the current scroll
+  // position (virtualized file list), so there's no reliable way to
+  // "pre-scan the whole page" from a content script - trying to drive that
+  // programmatically turned out to be slow and fragile. Instead, this just
+  // scans whatever's currently in the DOM on every tick(): as the user
+  // scrolls through the diff themselves, GitLab mounts new content, tick()
+  // fires (via the MutationObserver in start()), and the button updates to
+  // match what's visible right now.
 
   function isDiffsPage() {
     return /\/merge_requests\/\d+\/diffs/.test(location.pathname);
@@ -262,9 +271,24 @@
       return;
     }
 
+    const count = getUncoveredLines().length;
+    if (count === 0) {
+      removeCoverageButton();
+      return;
+    }
+
     let btn = document.getElementById(COVERAGE_BTN_ID);
     if (!btn) btn = createCoverageButton();
-    btn.textContent = 'loading';
+
+    const text = String(count);
+    // Guard against writing the same text every tick: `.textContent =`
+    // always replaces child nodes, even with an identical value, which the
+    // MutationObserver (childList + subtree) picks up as a mutation and
+    // re-triggers tick() with. Left unconditional, that becomes an infinite
+    // self-triggered mutation loop that hangs the tab.
+    if (btn.textContent !== text) {
+      btn.textContent = text;
+    }
   }
 
   // ---- bootstrap ----
