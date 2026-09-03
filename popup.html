@@ -9,15 +9,32 @@
     button { margin-top: 8px; padding: 6px 12px; cursor: pointer; }
     p { font-size: 11px; color: #666; }
     #status { font-size: 11px; color: green; margin-left: 8px; }
+    hr { margin: 12px 0; border: none; border-top: 1px solid #ddd; }
+    label.toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+    #reveal { display: block; width: 100%; }
+    #revealStatus { display: block; font-size: 11px; color: green; margin-top: 4px; }
   </style>
 </head>
 <body>
+  <label class="toggle">
+    <input type="checkbox" id="enabled" />
+    Extension enabled
+  </label>
+
+  <hr />
+
   <h3>Auto-hide file patterns</h3>
   <p>One glob per line, e.g. <code>*.spec.ts</code></p>
   <textarea id="patterns"></textarea>
   <br />
   <button id="save">Save</button>
   <span id="status"></span>
+
+  <hr />
+
+  <button id="reveal">Show all hidden on this page</button>
+  <span id="revealStatus"></span>
+
   <script src="popup.js"></script>
 </body>
 </html>

@@ -6,6 +6,7 @@
   const STYLE_ID = 'gitlab-autohide-styles';
 
   let regexes = [];
+  let enabled = true;
 
   // ---- Diff auto-hide (merge request diffs page) ----
 
@@ -14,13 +15,21 @@
     return new RegExp('^' + escaped + '$');
   }
 
-  function loadPatterns(callback) {
-    chrome.storage.sync.get({ patterns: DEFAULT_PATTERNS }, (data) => {
+  function loadSettings(callback) {
+    chrome.storage.sync.get({ patterns: DEFAULT_PATTERNS, enabled: true }, (data) => {
       regexes = data.patterns
         .map((p) => p.trim())
         .filter(Boolean)
         .map(globToRegex);
+      enabled = data.enabled !== false;
       callback();
+    });
+  }
+
+  function revealAll() {
+    document.querySelectorAll('.file-header-content').forEach((header) => {
+      const btn = header.querySelector('button[aria-label="Show file contents"]');
+      if (btn) btn.click();
     });
   }
 
@@ -187,6 +196,7 @@
   // ---- bootstrap ----
 
   function tick() {
+    if (!enabled) return;
     scanDiffHeaders();
     scanChangesCount();
     handleRoute();
@@ -194,7 +204,7 @@
 
   function start() {
     injectStyles();
-    loadPatterns(() => {
+    loadSettings(() => {
       tick();
       const observer = new MutationObserver(tick);
       observer.observe(document.body, { childList: true, subtree: true, characterData: true });
@@ -202,8 +212,14 @@
   }
 
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'sync' && changes.patterns) {
-      loadPatterns(() => {});
+    if (area === 'sync' && (changes.patterns || changes.enabled)) {
+      loadSettings(() => {});
+    }
+  });
+
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message?.type === 'GITLAB_AUTOHIDE_REVEAL') {
+      revealAll();
     }
   });
 

@@ -25,6 +25,25 @@ ale NE na detailu jednoho MR) se vpravo dole objeví plovoucí tlačítko **🎲
 Kliknutím se z aktuálně vyrenderovaného seznamu (respektuje jakékoli filtry v URL)
 náhodně vybere jeden MR a prohlížeč na něj naviguje.
 
+## Zapnutí/vypnutí extension
+
+V popupu (ikona v toolbaru) je nahoře checkbox **"Extension enabled"** (výchozí:
+zapnuto). Když je vypnuto, `content.js` na stránce nic nedělá (žádné auto-hide,
+žádné skrývání počtu změn, žádné Random MR tlačítko) — už provedené změny na
+aktuálně otevřené stránce ale samy nezmizí, dokud stránku neobnovíš. Když
+checkbox znovu zapneš a aktivní tab je zrovna na stránce, kterou má extension
+obsluhovat (`.../merge_requests...`), stránka se automaticky obnoví (reload),
+aby se efekty hned znovu projevily.
+
+## Odkrytí schovaných souborů
+
+Tlačítko **"Show all hidden on this page"** v popupu rozbalí zpět všechny
+soubory, které extension na aktuální stránce automaticky sbalila (pošle zprávu
+`content.js`u, který klikne na "Show file contents" u každého sbaleného
+souboru). Jde jen o jednorázové odkrytí pro tuto instanci stránky — filtr
+(vzory v nastavení) dál platí, takže při dalším příchodu na stránku nebo po
+refreshi se odpovídající soubory zase automaticky sbalí.
+
 ## Skrytí počtu změn
 
 V záložce "Changes" na detailu merge requestu (`.../merge_requests/<id>`) se
