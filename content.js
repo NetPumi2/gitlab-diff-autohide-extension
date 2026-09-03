@@ -8,6 +8,7 @@
 
   let regexes = [];
   let enabled = true;
+  let coverageEnabled = true;
   let coverageIndex = -1;
 
   // ---- Settings ----
@@ -18,14 +19,18 @@
   }
 
   function loadSettings(callback) {
-    chrome.storage.sync.get({ patterns: DEFAULT_PATTERNS, enabled: true }, (data) => {
-      regexes = data.patterns
-        .map((p) => p.trim())
-        .filter(Boolean)
-        .map(globToRegex);
-      enabled = data.enabled !== false;
-      callback();
-    });
+    chrome.storage.sync.get(
+      { patterns: DEFAULT_PATTERNS, enabled: true, coverageEnabled: true },
+      (data) => {
+        regexes = data.patterns
+          .map((p) => p.trim())
+          .filter(Boolean)
+          .map(globToRegex);
+        enabled = data.enabled !== false;
+        coverageEnabled = data.coverageEnabled !== false;
+        callback();
+      }
+    );
   }
 
   // ---- Diff auto-hide (merge request diffs page) ----
@@ -252,20 +257,14 @@
   }
 
   function ensureCoverageButton() {
-    if (!isDiffsPage()) {
-      removeCoverageButton();
-      return;
-    }
-
-    const count = getUncoveredLines().length;
-    if (count === 0) {
+    if (!coverageEnabled || !isDiffsPage()) {
       removeCoverageButton();
       return;
     }
 
     let btn = document.getElementById(COVERAGE_BTN_ID);
     if (!btn) btn = createCoverageButton();
-    btn.textContent = `🔴 ${count} uncovered`;
+    btn.textContent = 'loading';
   }
 
   // ---- bootstrap ----
@@ -297,7 +296,7 @@
   }
 
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'sync' && (changes.patterns || changes.enabled)) {
+    if (area === 'sync' && (changes.patterns || changes.enabled || changes.coverageEnabled)) {
       loadSettings(tick);
     }
   });
