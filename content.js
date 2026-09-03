@@ -4,9 +4,10 @@
   const RANDOM_BTN_ID = 'gitlab-random-mr-btn';
   const HIDDEN_BADGE_CLASS = 'gitlab-hidden-badge';
   const STYLE_ID = 'gitlab-autohide-styles';
+  const COVERAGE_BTN_ID = 'gitlab-coverage-btn';
 
   let regexes = [];
-  let enabled = true;
+  let coverageIndex = -1;
 
   // ---- Diff auto-hide (merge request diffs page) ----
 
@@ -15,21 +16,13 @@
     return new RegExp('^' + escaped + '$');
   }
 
-  function loadSettings(callback) {
-    chrome.storage.sync.get({ patterns: DEFAULT_PATTERNS, enabled: true }, (data) => {
+  function loadPatterns(callback) {
+    chrome.storage.sync.get({ patterns: DEFAULT_PATTERNS }, (data) => {
       regexes = data.patterns
         .map((p) => p.trim())
         .filter(Boolean)
         .map(globToRegex);
-      enabled = data.enabled !== false;
       callback();
-    });
-  }
-
-  function revealAll() {
-    document.querySelectorAll('.file-header-content').forEach((header) => {
-      const btn = header.querySelector('button[aria-label="Show file contents"]');
-      if (btn) btn.click();
     });
   }
 
@@ -175,8 +168,6 @@
     }
 
     if (!badge.classList.contains(HIDDEN_BADGE_CLASS)) {
-      // Capture the badge's real colors before we override them, so :hover
-      // can restore the original look instead of guessing at a color.
       const badgeStyle = getComputedStyle(badge);
       badge.style.setProperty('--gitlab-autohide-original-bg', badgeStyle.backgroundColor);
       badge.style.setProperty('--gitlab-autohide-original-border', badgeStyle.borderColor);
@@ -193,18 +184,97 @@
     document.querySelectorAll('.js-changes-tab-count').forEach(processChangesCount);
   }
 
+  // ---- Jump-to-uncovered-line button (diffs page) ----
+  //
+  // GitLab marks each diff line's coverage gutter cell with
+  // `.line-coverage.coverage` (hit) or `.line-coverage.no-coverage` (miss).
+  // We show a floating button with the current miss count; each click jumps
+  // to the next uncovered line (wrapping back to the first after the last).
+
+  function isDiffsPage() {
+    return /\/merge_requests\/\d+\/diffs/.test(location.pathname);
+  }
+
+  function getUncoveredLines() {
+    return Array.from(document.querySelectorAll('.diff-td.line-coverage.no-coverage'));
+  }
+
+  function flashLine(el) {
+    const previousOutline = el.style.outline;
+    const previousOffset = el.style.outlineOffset;
+    el.style.outline = '2px solid #fff';
+    el.style.outlineOffset = '-2px';
+    setTimeout(() => {
+      el.style.outline = previousOutline;
+      el.style.outlineOffset = previousOffset;
+    }, 1000);
+  }
+
+  function goToNextUncoveredLine() {
+    const lines = getUncoveredLines();
+    if (lines.length === 0) return;
+    coverageIndex = (coverageIndex + 1) % lines.length;
+    const target = lines[coverageIndex];
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    flashLine(target);
+  }
+
+  function createCoverageButton() {
+    const btn = document.createElement('button');
+    btn.id = COVERAGE_BTN_ID;
+    btn.type = 'button';
+    Object.assign(btn.style, {
+      position: 'fixed',
+      bottom: '24px',
+      right: '24px',
+      zIndex: '9999',
+      padding: '10px 18px',
+      borderRadius: '20px',
+      border: 'none',
+      background: '#e9322d',
+      color: '#fff',
+      fontSize: '14px',
+      fontWeight: '600',
+      fontFamily: 'sans-serif',
+      cursor: 'pointer',
+      boxShadow: '0 2px 10px rgba(0,0,0,0.35)',
+    });
+    btn.addEventListener('click', goToNextUncoveredLine);
+    document.body.appendChild(btn);
+    return btn;
+  }
+
+  function ensureCoverageButton() {
+    if (!isDiffsPage()) {
+      document.getElementById(COVERAGE_BTN_ID)?.remove();
+      coverageIndex = -1;
+      return;
+    }
+
+    const count = getUncoveredLines().length;
+    if (count === 0) {
+      document.getElementById(COVERAGE_BTN_ID)?.remove();
+      coverageIndex = -1;
+      return;
+    }
+
+    let btn = document.getElementById(COVERAGE_BTN_ID);
+    if (!btn) btn = createCoverageButton();
+    btn.textContent = `🔴 ${count} uncovered`;
+  }
+
   // ---- bootstrap ----
 
   function tick() {
-    if (!enabled) return;
     scanDiffHeaders();
     scanChangesCount();
     handleRoute();
+    ensureCoverageButton();
   }
 
   function start() {
     injectStyles();
-    loadSettings(() => {
+    loadPatterns(() => {
       tick();
       const observer = new MutationObserver(tick);
       observer.observe(document.body, { childList: true, subtree: true, characterData: true });
@@ -212,14 +282,8 @@
   }
 
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'sync' && (changes.patterns || changes.enabled)) {
-      loadSettings(() => {});
-    }
-  });
-
-  chrome.runtime.onMessage.addListener((message) => {
-    if (message?.type === 'GITLAB_AUTOHIDE_REVEAL') {
-      revealAll();
+    if (area === 'sync' && changes.patterns) {
+      loadPatterns(() => {});
     }
   });
 
