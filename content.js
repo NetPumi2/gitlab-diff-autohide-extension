@@ -4,10 +4,8 @@
   const RANDOM_BTN_ID = 'gitlab-random-mr-btn';
   const HIDDEN_BADGE_CLASS = 'gitlab-hidden-badge';
   const STYLE_ID = 'gitlab-autohide-styles';
-  const COVERAGE_BTN_ID = 'gitlab-coverage-btn';
 
   let regexes = [];
-  let coverageIndex = -1;
 
   // ---- Diff auto-hide (merge request diffs page) ----
 
@@ -120,6 +118,14 @@
   }
 
   // ---- Hide "Changes" file-count badge (merge request detail page) ----
+  //
+  // GitLab re-renders the count text (Vue) whenever the active tab changes,
+  // so instead of clearing the text once, we keep it the same size/shape as
+  // the original badge and just recolor it via a persistent CSS class - that
+  // way it stays hidden no matter how many times the underlying text node
+  // gets updated. On hover, the badge reverts to its original look (colors
+  // captured before we override them) so you can peek at the real number,
+  // then goes back to red once the mouse leaves.
 
   function injectStyles() {
     if (document.getElementById(STYLE_ID)) return;
@@ -160,6 +166,8 @@
     }
 
     if (!badge.classList.contains(HIDDEN_BADGE_CLASS)) {
+      // Capture the badge's real colors before we override them, so :hover
+      // can restore the original look instead of guessing at a color.
       const badgeStyle = getComputedStyle(badge);
       badge.style.setProperty('--gitlab-autohide-original-bg', badgeStyle.backgroundColor);
       badge.style.setProperty('--gitlab-autohide-original-border', badgeStyle.borderColor);
@@ -176,87 +184,12 @@
     document.querySelectorAll('.js-changes-tab-count').forEach(processChangesCount);
   }
 
-  // ---- Jump-to-uncovered-line button (diffs page) ----
-
-  function isDiffsPage() {
-    return /\/merge_requests\/\d+\/diffs/.test(location.pathname);
-  }
-
-  function getUncoveredLines() {
-    return Array.from(document.querySelectorAll('.diff-td.line-coverage.no-coverage'));
-  }
-
-  function flashLine(el) {
-    const previousOutline = el.style.outline;
-    const previousOffset = el.style.outlineOffset;
-    el.style.outline = '2px solid #fff';
-    el.style.outlineOffset = '-2px';
-    setTimeout(() => {
-      el.style.outline = previousOutline;
-      el.style.outlineOffset = previousOffset;
-    }, 1000);
-  }
-
-  function goToNextUncoveredLine() {
-    const lines = getUncoveredLines();
-    if (lines.length === 0) return;
-    coverageIndex = (coverageIndex + 1) % lines.length;
-    const target = lines[coverageIndex];
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    flashLine(target);
-  }
-
-  function createCoverageButton() {
-    const btn = document.createElement('button');
-    btn.id = COVERAGE_BTN_ID;
-    btn.type = 'button';
-    Object.assign(btn.style, {
-      position: 'fixed',
-      bottom: '24px',
-      right: '24px',
-      zIndex: '9999',
-      padding: '10px 18px',
-      borderRadius: '20px',
-      border: 'none',
-      background: '#e9322d',
-      color: '#fff',
-      fontSize: '14px',
-      fontWeight: '600',
-      fontFamily: 'sans-serif',
-      cursor: 'pointer',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.35)',
-    });
-    btn.addEventListener('click', goToNextUncoveredLine);
-    document.body.appendChild(btn);
-    return btn;
-  }
-
-  function ensureCoverageButton() {
-    if (!isDiffsPage()) {
-      document.getElementById(COVERAGE_BTN_ID)?.remove();
-      coverageIndex = -1;
-      return;
-    }
-
-    const count = getUncoveredLines().length;
-    if (count === 0) {
-      document.getElementById(COVERAGE_BTN_ID)?.remove();
-      coverageIndex = -1;
-      return;
-    }
-
-    let btn = document.getElementById(COVERAGE_BTN_ID);
-    if (!btn) btn = createCoverageButton();
-    btn.textContent = `🔴 ${count} uncovered`;
-  }
-
   // ---- bootstrap ----
 
   function tick() {
     scanDiffHeaders();
     scanChangesCount();
     handleRoute();
-    ensureCoverageButton();
   }
 
   function start() {
