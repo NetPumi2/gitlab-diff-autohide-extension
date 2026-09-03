@@ -120,14 +120,6 @@
   }
 
   // ---- Hide "Changes" file-count badge (merge request detail page) ----
-  //
-  // GitLab re-renders the count text (Vue) whenever the active tab changes,
-  // so instead of clearing the text once, we keep it the same size/shape as
-  // the original badge and just recolor it via a persistent CSS class - that
-  // way it stays hidden no matter how many times the underlying text node
-  // gets updated. On hover, the badge reverts to its original look (colors
-  // captured before we override them) so you can peek at the real number,
-  // then goes back to red once the mouse leaves.
 
   function injectStyles() {
     if (document.getElementById(STYLE_ID)) return;
@@ -185,11 +177,6 @@
   }
 
   // ---- Jump-to-uncovered-line button (diffs page) ----
-  //
-  // GitLab marks each diff line's coverage gutter cell with
-  // `.line-coverage.coverage` (hit) or `.line-coverage.no-coverage` (miss).
-  // We show a floating button with the current miss count; each click jumps
-  // to the next uncovered line (wrapping back to the first after the last).
 
   function isDiffsPage() {
     return /\/merge_requests\/\d+\/diffs/.test(location.pathname);

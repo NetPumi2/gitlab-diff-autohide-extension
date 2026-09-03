@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "GitLab Diff Auto-Hide",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Automatically collapses spec/stories/snapshot files in GitLab merge request diffs.",
   "permissions": ["storage"],
   "content_scripts": [
